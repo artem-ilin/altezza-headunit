@@ -34,6 +34,7 @@
 
 - `firmware/` — PlatformIO, Arduino, C++, плата ESP32-S3 DevKitC-1. Сборка: `cd firmware && pio run`.
 - BLE — NimBLE-Arduino. Настройки — Preferences (NVS). Веб — ESPAsyncWebServer. OTA — ArduinoOTA.
+- Прошивка в машине обновляется по Wi-Fi (OTA, этап 1.2), USB — только запасной путь.
 - Модули независимые (см. `docs/architecture.md`), каждый проверяется отдельно.
 - Не блокировать `loop()`: никаких длинных `delay()`.
 
