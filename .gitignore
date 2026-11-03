@@ -1,0 +1,8 @@
+.pio/
+.vscode/
+*.pyc
+.DS_Store
+# KiCad backups
+*-backups/
+*.kicad_prl
+fp-info-cache
