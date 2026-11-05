@@ -1,0 +1,237 @@
+<title>ESP32-S3 + nRF24L01+</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: одна колонка ~860px — схема сверху, под ней физическая распиновка, таблица и правила */
+:root{
+  --bg:#f5f6f3; --fg:#1d2320; --muted:#5d6762; --line:#c9cfca; --card:#ffffff;
+  --pcb:#e3ebe4; --pcb-edge:#7d9884; --pad:#b08a3e; --chip:#2b302d; --chip-fg:#e9ece9;
+  --vcc:#d0342c; --gnd:#2b2f2d; --ce:#e07b10; --csn:#c9a400; --sck:#2e9a46; --mosi:#2f6fd6; --miso:#8a45c7; --irq:#8a918d;
+  --warn-bg:#fff1e6; --warn-fg:#8a3b00;
+  --font-ui:"Golos Text",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#141816; --fg:#e4e8e5; --muted:#9aa49e; --line:#38403b; --card:#1c211e;
+  --pcb:#1f2a23; --pcb-edge:#4e6b57; --pad:#c9a45a; --chip:#0c0e0d; --chip-fg:#d5dbd7;
+  --vcc:#ff6b5f; --gnd:#cfd5d1; --ce:#ff9d3b; --csn:#f0cf3a; --sck:#4fcf6c; --mosi:#6aa0ff; --miso:#c08bff; --irq:#8c958f;
+  --warn-bg:#3a2414; --warn-fg:#ffc89a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141816; --fg:#e4e8e5; --muted:#9aa49e; --line:#38403b; --card:#1c211e;
+  --pcb:#1f2a23; --pcb-edge:#4e6b57; --pad:#c9a45a; --chip:#0c0e0d; --chip-fg:#d5dbd7;
+  --vcc:#ff6b5f; --gnd:#cfd5d1; --ce:#ff9d3b; --csn:#f0cf3a; --sck:#4fcf6c; --mosi:#6aa0ff; --miso:#c08bff; --irq:#8c958f;
+  --warn-bg:#3a2414; --warn-fg:#ffc89a; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-ui);font-size:15px;line-height:1.55}
+.wrap{max-width:880px;margin:0 auto;padding-block:28px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:28px}
+h1{font-size:1.7rem;margin:0;text-wrap:balance;letter-spacing:-.01em}
+h2{font-size:1.1rem;margin:0 0 10px;text-wrap:balance}
+.lead{color:var(--muted);margin:6px 0 0;max-width:65ch}
+.eyebrow{font-family:var(--font-mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.diagram{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow-x:auto}
+.diagram svg{display:block;min-width:640px;width:100%;height:auto}
+svg text{font-family:var(--font-mono);fill:var(--fg)}
+.cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:28px;align-items:start}
+@media (max-width:720px){.cols{grid-template-columns:minmax(0,1fr)}}
+.header-grid{display:grid;grid-template-columns:repeat(2,minmax(0,92px));gap:6px;font-family:var(--font-mono);font-size:.85rem}
+.header-grid div{border:1px solid var(--line);border-radius:6px;padding:6px 8px;display:flex;gap:8px;align-items:center;background:var(--card)}
+.dot{width:10px;height:10px;border-radius:50%;flex:none}
+.sq{border-radius:2px}
+.note{font-size:.85rem;color:var(--muted);margin:10px 0 0;max-width:42ch}
+table{border-collapse:collapse;width:100%;font-size:.9rem}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:500;color:var(--muted);font-size:.78rem;text-transform:uppercase;letter-spacing:.05em}
+td.m{font-family:var(--font-mono);white-space:nowrap}
+.tbl{overflow-x:auto}
+ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px;max-width:70ch}
+.warn{background:var(--warn-bg);color:var(--warn-fg);border-radius:8px;padding:10px 14px;font-weight:500}
+code{font-family:var(--font-mono);font-size:.9em}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Этап 1.6 · макет на столе</div>
+    <h1>ESP32-S3 + nRF24L01+: подключение</h1>
+    <p class="lead">Восемь проводов Dupont «мама-мама» от гребёнки nRF24 к левому ряду ESP32-S3-DevKitC-1. Все сигнальные выводы, GPIO 9–14, идут подряд, поэтому провода не путаются.</p>
+  </header>
+
+  <div class="diagram" role="img" aria-label="Схема соединений nRF24L01+ и ESP32-S3-DevKitC-1">
+    <svg viewBox="0 0 900 760" xmlns="http://www.w3.org/2000/svg">
+      <!-- ===== nRF24 module (logical, pins in one column) ===== -->
+      <rect x="80" y="260" width="220" height="290" rx="8" fill="var(--pcb)" stroke="var(--pcb-edge)" stroke-width="2"/>
+      <path d="M100 285 h40 v30 h-30 v30 h30 v30 h-30 v30 h30 v30 h-30 v30 h30 v30 h-30 v30 h30 v20" fill="none" stroke="var(--pad)" stroke-width="3"/>
+      <text x="120" y="545" font-size="11" text-anchor="middle" fill="var(--muted)" style="fill:var(--muted)">антенна</text>
+      <rect x="168" y="372" width="62" height="62" rx="3" fill="var(--chip)"/>
+      <text x="199" y="400" font-size="9" text-anchor="middle" style="fill:var(--chip-fg)">nRF24</text>
+      <text x="199" y="413" font-size="9" text-anchor="middle" style="fill:var(--chip-fg)">L01+</text>
+      <text x="190" y="285" font-size="13" text-anchor="middle" font-weight="600">nRF24L01+</text>
+
+      <!-- pins -->
+      <g font-size="12" text-anchor="end">
+        <text x="288" y="304">GND</text>
+        <text x="288" y="334">VCC</text>
+        <text x="288" y="364">CE</text>
+        <text x="288" y="394">CSN</text>
+        <text x="288" y="424">SCK</text>
+        <text x="288" y="454">MOSI</text>
+        <text x="288" y="484">MISO</text>
+        <text x="288" y="514">IRQ</text>
+      </g>
+
+      <!-- ===== wires ===== -->
+      <g fill="none" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round">
+        <polyline points="300,300 340,300 340,30 740,30 740,100" stroke="var(--gnd)"/>
+        <polyline points="300,330 360,330 360,100 580,100" stroke="var(--vcc)"/>
+        <polyline points="300,360 520,360 520,464 580,464" stroke="var(--ce)"/>
+        <polyline points="300,390 500,390 500,490 580,490" stroke="var(--csn)"/>
+        <polyline points="300,420 460,420 460,542 580,542" stroke="var(--sck)"/>
+        <polyline points="300,450 480,450 480,516 580,516" stroke="var(--mosi)"/>
+        <polyline points="300,480 440,480 440,568 580,568" stroke="var(--miso)"/>
+        <polyline points="300,510 420,510 420,594 580,594" stroke="var(--irq)" stroke-dasharray="7 6"/>
+      </g>
+
+      <!-- capacitor VCC–GND right at the module -->
+      <g stroke="var(--fg)" stroke-width="2" fill="none">
+        <line x1="320" y1="300" x2="320" y2="311"/>
+        <line x1="311" y1="311" x2="329" y2="311"/>
+        <path d="M311 320 q9 -6 18 0"/>
+        <line x1="320" y1="318" x2="320" y2="330"/>
+      </g>
+      <circle cx="320" cy="300" r="3.5" fill="var(--gnd)"/>
+      <circle cx="320" cy="330" r="3.5" fill="var(--vcc)"/>
+      <text x="372" y="312" font-size="12">C 10–100 мкФ</text>
+      <text x="372" y="327" font-size="11" style="fill:var(--muted)">«+» к VCC</text>
+
+      <g fill="var(--pad)">
+        <rect x="295" y="295" width="10" height="10"/>
+        <circle cx="300" cy="330" r="5"/><circle cx="300" cy="360" r="5"/><circle cx="300" cy="390" r="5"/>
+        <circle cx="300" cy="420" r="5"/><circle cx="300" cy="450" r="5"/><circle cx="300" cy="480" r="5"/><circle cx="300" cy="510" r="5"/>
+      </g>
+
+      <!-- ===== ESP32-S3-DevKitC-1 ===== -->
+      <rect x="560" y="60" width="200" height="660" rx="8" fill="var(--pcb)" stroke="var(--pcb-edge)" stroke-width="2"/>
+      <rect x="650" y="120" width="72" height="190" rx="4" fill="var(--chip)"/>
+      <text x="686" y="205" font-size="10" text-anchor="middle" style="fill:var(--chip-fg)">WROOM</text>
+      <text x="686" y="220" font-size="10" text-anchor="middle" style="fill:var(--chip-fg)">-1</text>
+      <text transform="translate(690 470) rotate(-90)" font-size="13" text-anchor="middle" font-weight="600">ESP32-S3-DevKitC-1</text>
+      <text transform="translate(712 470) rotate(-90)" font-size="10" text-anchor="middle" style="fill:var(--muted)">вид сверху · USB снизу</text>
+      <rect x="590" y="700" width="44" height="26" rx="4" fill="var(--chip)"/>
+      <rect x="686" y="700" width="44" height="26" rx="4" fill="var(--chip)"/>
+      <text x="612" y="745" font-size="10" text-anchor="middle">UART</text>
+      <text x="708" y="745" font-size="10" text-anchor="middle">USB</text>
+
+      <!-- J1 (left header) -->
+      <text x="580" y="80" font-size="10" text-anchor="middle" style="fill:var(--muted)">J1</text>
+      <g font-size="11">
+        <text x="594" y="104" font-weight="600">3V3</text><text x="594" y="130" style="fill:var(--muted)">3V3</text>
+        <text x="594" y="156" style="fill:var(--muted)">RST</text><text x="594" y="182" style="fill:var(--muted)">4</text>
+        <text x="594" y="208" style="fill:var(--muted)">5</text><text x="594" y="234" style="fill:var(--muted)">6</text>
+        <text x="594" y="260" style="fill:var(--muted)">7</text><text x="594" y="286" style="fill:var(--muted)">15</text>
+        <text x="594" y="312" style="fill:var(--muted)">16</text><text x="594" y="338" style="fill:var(--muted)">17</text>
+        <text x="594" y="364" style="fill:var(--muted)">18</text><text x="594" y="390" style="fill:var(--muted)">8</text>
+        <text x="594" y="416" style="fill:var(--muted)">3</text><text x="594" y="442" style="fill:var(--muted)">46</text>
+        <text x="594" y="468" font-weight="600">9</text><text x="594" y="494" font-weight="600">10</text>
+        <text x="594" y="520" font-weight="600">11</text><text x="594" y="546" font-weight="600">12</text>
+        <text x="594" y="572" font-weight="600">13</text><text x="594" y="598" font-weight="600">14</text>
+        <text x="594" y="624" style="fill:var(--muted)">5V</text><text x="594" y="650" style="fill:var(--muted)">GND</text>
+      </g>
+      <g fill="var(--pad)">
+        <circle cx="580" cy="100" r="5"/><circle cx="580" cy="126" r="4" opacity=".55"/><circle cx="580" cy="152" r="4" opacity=".55"/>
+        <circle cx="580" cy="178" r="4" opacity=".55"/><circle cx="580" cy="204" r="4" opacity=".55"/><circle cx="580" cy="230" r="4" opacity=".55"/>
+        <circle cx="580" cy="256" r="4" opacity=".55"/><circle cx="580" cy="282" r="4" opacity=".55"/><circle cx="580" cy="308" r="4" opacity=".55"/>
+        <circle cx="580" cy="334" r="4" opacity=".55"/><circle cx="580" cy="360" r="4" opacity=".55"/><circle cx="580" cy="386" r="4" opacity=".55"/>
+        <circle cx="580" cy="412" r="4" opacity=".55"/><circle cx="580" cy="438" r="4" opacity=".55"/>
+        <circle cx="580" cy="464" r="5"/><circle cx="580" cy="490" r="5"/><circle cx="580" cy="516" r="5"/>
+        <circle cx="580" cy="542" r="5"/><circle cx="580" cy="568" r="5"/><circle cx="580" cy="594" r="5"/>
+        <circle cx="580" cy="620" r="4" opacity=".55"/><circle cx="580" cy="646" r="4" opacity=".55"/>
+      </g>
+
+      <!-- J3 (right header): only top GND used -->
+      <text x="748" y="84" font-size="10" style="fill:var(--muted)">J3</text>
+      <text x="728" y="104" font-size="11" text-anchor="end" font-weight="600">GND</text>
+      <g fill="var(--pad)">
+        <circle cx="740" cy="100" r="5"/>
+        <circle cx="740" cy="126" r="4" opacity=".55"/><circle cx="740" cy="152" r="4" opacity=".55"/><circle cx="740" cy="178" r="4" opacity=".55"/>
+        <circle cx="740" cy="204" r="4" opacity=".55"/><circle cx="740" cy="230" r="4" opacity=".55"/><circle cx="740" cy="256" r="4" opacity=".55"/>
+        <circle cx="740" cy="282" r="4" opacity=".55"/><circle cx="740" cy="308" r="4" opacity=".55"/><circle cx="740" cy="334" r="4" opacity=".55"/>
+        <circle cx="740" cy="360" r="4" opacity=".55"/><circle cx="740" cy="386" r="4" opacity=".55"/><circle cx="740" cy="412" r="4" opacity=".55"/>
+        <circle cx="740" cy="438" r="4" opacity=".55"/><circle cx="740" cy="464" r="4" opacity=".55"/><circle cx="740" cy="490" r="4" opacity=".55"/>
+        <circle cx="740" cy="516" r="4" opacity=".55"/><circle cx="740" cy="542" r="4" opacity=".55"/><circle cx="740" cy="568" r="4" opacity=".55"/>
+        <circle cx="740" cy="594" r="4" opacity=".55"/><circle cx="740" cy="620" r="4" opacity=".55"/><circle cx="740" cy="646" r="4" opacity=".55"/>
+      </g>
+
+      <!-- legend -->
+      <g font-size="11">
+        <text x="80" y="600" font-weight="600">Провода</text>
+        <line x1="80" y1="620" x2="104" y2="620" stroke="var(--vcc)" stroke-width="3.2"/><text x="112" y="624">VCC → 3V3</text>
+        <line x1="80" y1="640" x2="104" y2="640" stroke="var(--gnd)" stroke-width="3.2"/><text x="112" y="644">GND → GND</text>
+        <line x1="80" y1="660" x2="104" y2="660" stroke="var(--ce)" stroke-width="3.2"/><text x="112" y="664">CE → 9</text>
+        <line x1="80" y1="680" x2="104" y2="680" stroke="var(--csn)" stroke-width="3.2"/><text x="112" y="684">CSN → 10</text>
+        <line x1="230" y1="620" x2="254" y2="620" stroke="var(--mosi)" stroke-width="3.2"/><text x="262" y="624">MOSI → 11</text>
+        <line x1="230" y1="640" x2="254" y2="640" stroke="var(--sck)" stroke-width="3.2"/><text x="262" y="644">SCK → 12</text>
+        <line x1="230" y1="660" x2="254" y2="660" stroke="var(--miso)" stroke-width="3.2"/><text x="262" y="664">MISO → 13</text>
+        <line x1="230" y1="680" x2="254" y2="680" stroke="var(--irq)" stroke-width="3.2" stroke-dasharray="7 6"/><text x="262" y="684">IRQ → 14 (опц.)</text>
+        <text x="80" y="712" style="fill:var(--muted)">Схема логическая: выводы nRF24 нарисованы в один ряд.</text>
+      </g>
+    </svg>
+  </div>
+
+  <div class="warn">VCC модуля подключать только к 3V3. От 5V nRF24 сгорит. Исключение: плата-адаптер со своим стабилизатором, её питают от 5V.</div>
+
+  <div class="cols">
+    <section>
+      <h2>Гребёнка nRF24, вид сверху</h2>
+      <div class="header-grid" aria-label="Расположение выводов 2×4">
+        <div><span class="dot sq" style="background:var(--gnd)"></span>GND</div>
+        <div><span class="dot" style="background:var(--vcc)"></span>VCC</div>
+        <div><span class="dot" style="background:var(--ce)"></span>CE</div>
+        <div><span class="dot" style="background:var(--csn)"></span>CSN</div>
+        <div><span class="dot" style="background:var(--sck)"></span>SCK</div>
+        <div><span class="dot" style="background:var(--mosi)"></span>MOSI</div>
+        <div><span class="dot" style="background:var(--miso)"></span>MISO</div>
+        <div><span class="dot" style="background:var(--irq)"></span>IRQ</div>
+      </div>
+      <p class="note">Антенна сверху, гребёнка внизу, смотрим со стороны деталей. GND — вывод с квадратной площадкой, он помечен «1». Модули PA/LNA и обычные распаяны одинаково.</p>
+    </section>
+
+    <section>
+      <h2>Таблица соединений</h2>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>nRF24</th><th>ESP32-S3</th><th>Зачем</th></tr></thead>
+          <tbody>
+            <tr><td class="m">VCC</td><td class="m">3V3 (J1, верх)</td><td>Питание 3.3 В</td></tr>
+            <tr><td class="m">GND</td><td class="m">GND (J3, верх)</td><td>Земля. Подойдёт и GND внизу J1</td></tr>
+            <tr><td class="m">CE</td><td class="m">GPIO 9</td><td>Включает приём и передачу</td></tr>
+            <tr><td class="m">CSN</td><td class="m">GPIO 10</td><td>Выбор чипа на шине SPI</td></tr>
+            <tr><td class="m">MOSI</td><td class="m">GPIO 11</td><td>SPI: ESP32 → модуль</td></tr>
+            <tr><td class="m">SCK</td><td class="m">GPIO 12</td><td>SPI: тактовый сигнал</td></tr>
+            <tr><td class="m">MISO</td><td class="m">GPIO 13</td><td>SPI: модуль → ESP32</td></tr>
+            <tr><td class="m">IRQ</td><td class="m">GPIO 14</td><td>Прерывание «пришёл пакет». Для перехвата не обязателен</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <section>
+    <h2>Как собрать на столе</h2>
+    <ul>
+      <li>ESP32 вставить в макетку. nRF24 в макетку не вставлять, иначе ряды замкнут его выводы. Модуль висит на проводах «мама-мама» рядом с платой.</li>
+      <li>Провода короткие, до 10 см. На длинных SPI сбоит.</li>
+      <li>Конденсатор паять или зажимать прямо на выводах VCC–GND модуля, а не у ESP32. У электролита длинная нога «+», она идёт к VCC. Для PA/LNA конденсатор обязателен.</li>
+      <li>Модуль PA/LNA положить антенной от ESP32 подальше: Wi-Fi платы мешает приёму.</li>
+      <li>Прошивать через разъём <b>USB</b>, не UART. Так задано в <code>platformio.ini</code>.</li>
+      <li>У клонов (N16R8 и Waveshare) порядок выводов может отличаться. Перед подключением сверить подписи на плате с этой схемой.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Почему выбраны эти выводы</h2>
+    <ul>
+      <li>GPIO 10–13 — аппаратный SPI2 (FSPI) по умолчанию, а 9 и 14 стоят рядом. Все сигналы идут подряд по левой гребёнке.</li>
+      <li>Не используются 0, 3, 45, 46: от них зависит загрузка. 35–37 заняты памятью PSRAM на N16R8 и N8R8. 19 и 20 — это USB.</li>
+      <li>В прошивке выводы задаются явно: <code>SPI.begin(12, 13, 11, 10)</code>, затем <code>radio.begin()</code> с CE = 9 и CSN = 10.</li>
+    </ul>
+  </section>
+</div>
